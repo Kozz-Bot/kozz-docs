@@ -1,5 +1,5 @@
 ---
-sidebar_position: 1
+sidebar_position: 2
 ---
 
 # Commands
@@ -23,7 +23,7 @@ import { createModule, createMethod } from "kozz-module-maker";
 
 const myModule = createModule({
   name: "ping",
-  address: `127.0.0.1::4521`,
+  address: "http://127.0.0.1:4521",
   // Add this
   commands: {
     boundariesToHandle: ["*"],
@@ -53,7 +53,7 @@ import { createModule, createMethod } from "kozz-module-maker";
 
 const myModule = createModule({
   name: "ping",
-  address: `127.0.0.1::4521`,
+  address: "http://127.0.0.1:4521",
   commands: {
     boundariesToHandle: ["*"],
     methods: {
@@ -73,7 +73,7 @@ import { createModule, createMethod } from "kozz-module-maker";
 
 const myModule = createModule({
   name: "ping",
-  address: `127.0.0.1::4521`,
+  address: "http://127.0.0.1:4521",
   commands: {
     boundariesToHandle: ["*"],
     methods: {

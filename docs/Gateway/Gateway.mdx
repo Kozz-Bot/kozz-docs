@@ -1,0 +1,56 @@
+---
+sidebar_position: 5
+---
+
+# Gateway
+
+It's the Gateway's job to receive all the events from every single boundary connected to it and then decide what to do with those event payloads.
+
+It will try to parse any message into an command and, if the parsing is sucessfull, try to find the corresponding module to send the command to.
+
+It will also manage all the connections and authentication with every single boundary and module. It will manage reconnections, inspecting payloads to see if they are malformed, the proxying of messages, the receivement and providing of resources and much more. It is by far the most complicated part of the system.
+
+## Resources
+
+The gateway can also provide resources when a boundary or handler ask. Those resources at the moment are:
+
+### All Boundaries:
+
+Provides all boundaries that are currently connected with the gateway.
+
+```json
+{
+  "response": [
+    {
+      "id": "3fxwNQovfSt9YJsLAAAe", // Connection ID
+      "boundary": {
+        "name": "Kozz-Whatsapp", // Boundary Name
+        "platform": "WA", // WA = Whatsapp
+        "OS": "linux", // Platform on which the boundary's client is running
+        "listeners": [] // Forwardable Events listeners
+      }
+    }
+  ]
+}
+```
+
+### All Handlers
+
+Provides all modules that are currently connected with the gateway.
+
+```json
+{
+  "response": [
+    {
+      "name": "tia", //Module Name
+      "handler": {
+        "id": "Y-y40LFeMN-xI920AAAB", // Connection ID
+        "methods": ["fallback", "default"], // Methods attatched to the module
+        "listeners": [] // Forwardable Events listeners
+      }
+    }
+  ]
+}
+```
+
+_Note:_ Writing the docs I figured the properties "name" and "id" of the boundaries and modules are in different places. I'll make the responses more coherent soon.

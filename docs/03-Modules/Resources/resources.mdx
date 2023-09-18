@@ -1,0 +1,147 @@
+---
+sidebar_position: 4
+---
+
+# Resources
+
+The modules can request information from each other using an API called `Resource asking`.
+
+Let's create a module that gets the url of your profile picture:
+
+```typescript
+//Substitute this for your phone number:
+const yourNumberWithCountryCode = [REDACTED];
+const contactId = `${yourNumberWithCountryCode}@c.us`;
+
+const myModule = createModule({
+  name: "MyModule",
+  address: "http://127.0.0.1:4521",
+});
+
+myModule.ask
+  .boundary("Kozz-Whatsapp", "contact_profile_pic", {
+    id: contactId,
+  })
+  .then(({ response }) => {
+    console.log(response);
+  });
+```
+
+The Kozz-Whatsapp boundary is prepared to provide some resources. But you can also insert resources into yout modules and have them exchanging data with each other.
+
+## Managing Resources Inside Modules
+
+You can insert resources into any Module using the `module.resources.upsertResource` method:
+
+```typescript
+//Substitute this for your phone number:
+const yourNumberWithCountryCode = [REDACTED];
+const contactId = `${yourNumberWithCountryCode}@c.us`;
+
+const myModule = createModule({
+  name: "MyModule",
+  address: `http://127.0.0.1:4521`,
+}).resources.upsertResource(
+  "MyMessage",
+  () => "Hello from Kozz-Bot!" // Resource getter function
+);
+
+const myOtherModule = createModule({
+  name: "MyOtherModule",
+  address: `http://127.0.0.1:4521`,
+});
+
+setTimeout(() => {
+  myOtherModule.ask.handler("MyModule", "MyMessage").then(({ response }) => {
+    // response is "Hello from Kozz-Bot!"
+    myOtherModule.sendMessage(contactId, "Kozz-Whatsapp", response);
+  });
+}, 1000);
+```
+
+The `MyOtherModule` will request `MyModule` for the resource `MyMessage`. When `MyModule` receives the request it will run the `ResourceGetterFuntion` which in this case is `() => "Hello from Kozz-Bot!"`. The return of this function will be passed to `MyOtherModule` as the resource it asked for. It is then used as the body of a message to yourself
+
+_Note:_ The setTimeout was used to ensure both modules have time to authenticate with the gateway before the resource was asked, similar on how you need to await a promise.
+
+## How Arguments Work When Asking Resources
+
+You can specify any object to be sent with the request for a given resource. The object will be inserted in the `ResourceGetter` function.
+
+```typescript
+const yourNumberWithCountryCode = [REDACTED];
+const contactId = `${yourNumberWithCountryCode}@c.us`;
+
+const myModule = createModule({
+  name: "MyModule",
+  address: `http://127.0.0.1:4521`,
+}).resources.upsertResource(
+  "Double",
+  // retrieve argument
+  ({ number }) => `The double of ${number} is ${number * 2}`
+);
+
+const myOtherModule = createModule({
+  name: "MyOtherModule",
+  address: `http://127.0.0.1:4521`,
+});
+
+setTimeout(() => {
+  myOtherModule.ask
+    .handler("MyModule", "Double", {
+      //send argument
+      number: 10,
+    })
+    .then(({ response }) => {
+      // response is "The double of 10 is 20"
+      myOtherModule.sendMessage(contactId, "Gramonta-Wa", response);
+    });
+}, 1000);
+```
+
+## Asking Resources From Command Handlers
+
+You can ask a resource from inside a command handler. You can either use `module.ask` or `requester.ask`, both of them point to the same methods inside the lib:
+
+```typescript
+const yourNumberWithCountryCode = [REDACTED];
+const contactId = `${yourNumberWithCountryCode}@c.us`;
+
+const myModule = createModule({
+  name: "MyModule",
+  address: `http://127.0.0.1:4521`,
+}).resources.upsertResource(
+  "Double",
+  ({ number }) => `The double of ${number} is ${number * 2}`
+);
+
+// Defining the arguments of the command
+const doublerNumberCommandArgs = {
+  number: "number",
+};
+
+// Defining the command itself
+const doubleNumberCommand = createMethod(
+  "default",
+  async (requester, { number }) => {
+    // Asking "MyModule" for the "Double" resource and providin the "number" argument
+    const { response } = await requester.ask.handler("MyModule", "Double", {
+      number,
+    });
+    requester.reply(response);
+  },
+  doubleNumberCommandArgs
+);
+
+const myOtherModule = createModule({
+  name: "doubler",
+  address: `http://127.0.0.1:4521`,
+  commands: {
+    boundariesToHandle: ["*"],
+    methods: {
+      ...doubleNumberCommand,
+    },
+  },
+});
+```
+
+Type `!doubler --number 10` and you shall see the bot replying with `The double of 10 is 20`.

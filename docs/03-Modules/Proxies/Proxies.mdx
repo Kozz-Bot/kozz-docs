@@ -1,0 +1,103 @@
+---
+sidebar_position: 3
+---
+
+# Message Proxy
+
+Message proxy is the automatic forwarding of messages to another service that wants to listen to them. Those messages can be forwarded to any Boundary or Module.
+
+Let's create a simple message proxy that listens to all the messages from our whatsapp boundary:
+
+```typescript
+const myModule = createModule({
+  name: "any-name-it-doesnt-really-matter",
+  address: "http://127.0.0.1:4521",
+  proxy: {
+    onMessage: (requester) => {
+      const { message } = requester.rawCommand;
+      console.log(
+        `[${message.groupName || "private-chat"}] - ${
+          message.contact.publicName
+        }(${message.contact.id})\n\t"${message.body}"`
+      );
+    },
+    source: "Kozz-Whatsapp/*",
+  },
+});
+```
+
+You shall start to see every message from your whatsapp showing up on the console.
+
+The property `proxy.source` controls what chats you want to listen. The format of the string is `BoundaryID/ChatID`, where the BoundaryID is the name you gave to the boundary and the ChatID can be discovered by logging the `message.to` property.
+
+You can also change the `ChatID` to the wildcard `*` in order to listen to all messages.
+
+## Overriding Destination
+
+You can make module request the forwarding of messages to another module other than itself.
+
+```typescript
+import { Source } from "kozz-types";
+import { createModule } from "kozz-module-maker";
+
+const myModule = createModule({
+  name: "MyModule",
+  address: "http://127.0.0.1:4521",
+  proxy: {
+    onMessage: (requester) => {
+      //Do nothing
+    },
+    source: "Kozz-Whatsapp/*",
+    // send it to "MyOtherModule"
+    destinationOverride: "MyOtherModule",
+  },
+});
+
+const myOtherModule = createModule({
+  name: "MyOtherModule",
+  address: "http://127.0.0.1:4521",
+  proxy: {
+    onMessage: (requester) => {
+      const { message } = requester.rawCommand;
+      console.log("In MyOtherModule");
+      console.log(
+        `[${message.groupName || "private-chat"}] - ${
+          message.contact.publicName
+        }(${message.contact.id})\n\t"${message.body}"`
+      );
+    },
+    source: "" as Source,
+  },
+});
+```
+
+You will see that, even though in `MyOtherModule` the source is an empty string, it's still receiving the message events from the boundary. This is because `MyModule` is requesting the proxy of messages to `MyOtherModule` instead of itself. You can use this feature to redirect messages from one boundary to another and create multiplatform chats!
+
+## Revoking a proxy
+
+You can revoke the proxy of messages calling `module.proxy.revoke()`at anytime
+
+```typescript
+const myModule = createModule({
+  name: "MyModule",
+  address: "http://127.0.0.1:4521",
+  proxy: {
+    onMessage: (requester) => {
+      const { message } = requester.rawCommand;
+      console.log(
+        `[${message.groupName || "private-chat"}] - ${
+          message.contact.publicName
+        }(${message.contact.id})\n\t"${message.body}"`
+      );
+
+      // Add this
+      if (message.body === "stop") {
+        myModule.proxy.revoke();
+      }
+    },
+    source: "Kozz-Whatsapp/*",
+  },
+});
+```
+
+You will see the messages appearing on your console until you (or anyone else) sends a message with body `"stop"`. The proxy will then be revoked and no more messages shall appear on your console, the last one being the `"stop"` that you sent.
