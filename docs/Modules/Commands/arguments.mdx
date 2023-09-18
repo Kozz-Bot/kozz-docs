@@ -1,0 +1,63 @@
+---
+sidebar_position: 3
+---
+
+# Arguments
+
+The arguents are also checked when someone types a command in the chat. You can define the arguments for a command using the following syntax:
+
+```typescript
+const defaultMethod = createMethod(
+  "default",
+  (requester, args) => {
+    requester.reply(`The double of ${args.myNumber} is ${args.myNumber * 2}`);
+  },
+  // second object defines the args and their type
+  {
+    myNumber: "number",
+  }
+);
+
+const myModule = createModule({
+  name: "test",
+  address: `127.0.0.1::4521`,
+  commands: {
+    boundariesToHandle: ["*"],
+    methods: {
+      ...defaultMethod,
+    },
+  },
+});
+```
+
+The third argument for the `createMethod` function will define how the arguments of the command must be structured for the command to run. If the arguments in the command are not defined how the method specifies, the command won't run. Not only the existence of the arguments are checked but also their types.
+
+[TODO]: Create a fallback specifically for when the arguments are invalid.
+
+## Arguments definition
+
+The arguments can be defined as:
+
+- "number"
+- "string"
+- "boolean"
+
+Or their optional types:
+
+- "number?"
+- "string?"
+- "boolean?"
+
+For example, if you define the arguments of a method in the following way...
+
+```typescript
+const defaultMethod = createMethod("default", (requester, args) => {}, {
+  myNumber: "number",
+  myBoolean: "boolean",
+  maybeString: "string?",
+  foo: "number?",
+  bar: "boolean?",
+});
+```
+
+The command will need to something similar to `--myNumber 123 --myBoolean false`. It wil also be able to capture arguments like `--foo 26` but this will be optional, because `foo` is defined as `number?`

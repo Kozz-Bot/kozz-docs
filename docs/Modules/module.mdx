@@ -1,0 +1,19 @@
+---
+sidebar_position: 0
+---
+
+# Creating your modules
+
+Let's start with a simple module:
+
+```typescript
+import { createModule } from "kozz-module-maker";
+
+const myModule = createModule({
+  name: "ping",
+  // The defaut address of the gateway
+  address: `127.0.0.1:4521`,
+});
+```
+
+It should connect with the gateway with no problem. However it does nothing. How do we define behaviour to the module?

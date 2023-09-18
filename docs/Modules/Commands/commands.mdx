@@ -1,0 +1,102 @@
+---
+sidebar_position: 1
+---
+
+# Commands
+
+import { Color } from "@site/src/components/ColorText";
+
+First, we need to tell the gateway that this module wants to do something. The gateway will them send payloads to this module expecting it to handle those payloads and react accordingly.
+
+One way of telling the gateway to send payloads to the module is by creating commands.
+
+The Kozz-Bot gateway has an in-built CLI-ish like parser which we will make use of.
+
+Since the name of our module is `ping`, whenever someone sends a message starting with `!ping`, the gateway will know the author of the message is trying to talk to our module.
+
+The second word of the command is the module. Basically it has to correspond to a method defined in our module. Lets define a method for our module so that it can awnser our command.
+
+Your code should look like this:
+
+```typescript
+import { createModule, createMethod } from "kozz-module-maker";
+
+const myModule = createModule({
+  name: "ping",
+  address: `127.0.0.1::4521`,
+  // Add this
+  commands: {
+    boundariesToHandle: ["*"],
+    methods: {
+      ...createMethod("test", (requester) => requester.reply("pong!")),
+    },
+  },
+});
+```
+
+Try restarting your module and sending `!ping test`. The bot should reply `pong!`!
+
+Lets break down even further what is going on:
+
+- With the object `comands` you define that this module will awnser to commands.
+- The properties `BoundariesToHandle` defines from which boundaries you want to process commands. `*` is the way to awnser from all the boundaries
+- You define a method called `test` that only replies `pong!`. What the method will do is mainly defined by the `requester` object
+
+However, you don't want to have to use two words for a command. You want to use `!ping`. How can we accomplish that?
+
+### Command methods and their fallbacks
+
+If you omit the method name from the command string, the module will try to call a special method: `default`.
+
+```typescript
+import { createModule, createMethod } from "kozz-module-maker";
+
+const myModule = createModule({
+  name: "ping",
+  address: `127.0.0.1::4521`,
+  commands: {
+    boundariesToHandle: ["*"],
+    methods: {
+      // special method name
+      ...createMethod("default", (requester) => requester.reply("pong!")),
+    },
+  },
+});
+```
+
+Now the bot will reply `pong!` if you type `!ping`, without needing to input in the command the name of the method!
+
+You can also define a fallback method, for when the user types a comand for a method that is not defined:
+
+```typescript
+import { createModule, createMethod } from "kozz-module-maker";
+
+const myModule = createModule({
+  name: "ping",
+  address: `127.0.0.1::4521`,
+  commands: {
+    boundariesToHandle: ["*"],
+    methods: {
+      // fallback method
+      ...createMethod("fallback", (requester) =>
+        requester.reply("Ooops, this method doesn't exist")
+      ),
+      ...createMethod("default", (requester) => requester.reply("pong!")),
+    },
+  },
+});
+```
+
+| Command       | Bot's Response                   |
+| ------------- | -------------------------------- |
+| !ping         | pong!                            |
+| !ping default | pong!                            |
+| !ping blah    | Ooops, this method doesn't exist |
+
+In case the command is only `!ping` the bot will try to run the methods in the following order
+
+- If there is a `default` method, run it
+- If not, try to run a `fallback` method
+- If none of the above exist, do nothing
+
+Got confused? Next section shows exactly how the commands are parsed!

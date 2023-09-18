@@ -1,0 +1,58 @@
+---
+sidebar_position: 2
+---
+
+### Command methods and their fallbacks
+
+If you omit the method name from the command string, the module will try to call a special method: `default`.
+
+```typescript
+import { createModule, createMethod } from "kozz-module-maker";
+
+const myModule = createModule({
+  name: "ping",
+  address: `127.0.0.1::4521`,
+  commands: {
+    boundariesToHandle: ["*"],
+    methods: {
+      // special method name
+      ...createMethod("default", (requester) => requester.reply("pong!")),
+    },
+  },
+});
+```
+
+Now the bot will reply `pong!` if you type `!ping`, without needing to input in the command the name of the method!
+
+You can also define a fallback method, for when the user types a comand for a method that is not defined:
+
+```typescript
+import { createModule, createMethod } from "kozz-module-maker";
+
+const myModule = createModule({
+  name: "ping",
+  address: `127.0.0.1::4521`,
+  commands: {
+    boundariesToHandle: ["*"],
+    methods: {
+      // fallback method
+      ...createMethod("fallback", (requester) =>
+        requester.reply("Ooops, this method doesn't exist")
+      ),
+      ...createMethod("default", (requester) => requester.reply("pong!")),
+    },
+  },
+});
+```
+
+| Command       | Bot's Response                   |
+| ------------- | -------------------------------- |
+| !ping         | pong!                            |
+| !ping default | pong!                            |
+| !ping blah    | Ooops, this method doesn't exist |
+
+In case the command is only `!ping` the bot will try to run the methods in the following order
+
+- If there is a `default` method, run it
+- If not, try to run a `fallback` method
+- If none of the above exist, do nothing

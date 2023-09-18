@@ -1,0 +1,18 @@
+.listContainer {
+  display: flex;
+  width: 100%;
+  flex-wrap: wrap;
+  gap: 35px;
+}
+
+.container {
+  border-radius: 10px;
+  padding: 2rem;
+  box-shadow: 3px 3px 5px 2px #555;
+}
+
+.title {
+  font-size: 1.5rem;
+  text-transform: capitalize;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}

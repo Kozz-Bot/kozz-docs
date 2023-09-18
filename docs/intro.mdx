@@ -1,0 +1,27 @@
+---
+sidebar_position: 1
+---
+
+# Kozz Bot
+
+Kozz Bot is a general purpose chat automation tool. Its focused on being a distributed system with high independence of the modules and easy multiplatform integration. It's written in typescript, uses a microsservices architecture and the services communicate with [Socket.io](https://socket.io).
+
+## Disclaimer
+
+The chatbots are supposed to work in a distributed environment. Multiple instances of different services working together. They all talk to each other via websocket, using [Socket.io](https://socket.io). There is no such thing as a single repo (yet) for all your chat automation needs because it requires different pieces being connected depending on what you want to build.
+
+You may think this is a very convoluted way to create a simple chatbot and right now, that is the case. This is a tool focused on a more robust use and requires a little bit more infrastructure than simply running a node instance. I'm still planning on creating docker images and buildscripts of preset environments for more simple usages though. Any help would be much appreciated!
+
+This tool is coming to it's alpha stage. There will be many bugs. Do not use this for professional use. You can help me reporting bugs and giving suggestions on my discord server
+
+The only chat integration I've made so far is with Whatsapp, using [Whatsapp-web.js](https://wwebjs.dev). That means the only platform you can automate right now is whatsapp though the wwebjs lib. If you want to integrate this tool with other platforms, please contact me and we will work toghether!
+
+## Architecture
+
+There are three types of microsservices.
+
+- The Module defines behaviour
+- The Boundary interfaces the chat
+- The Gateway orchestrates the communication between the microsservices
+
+In order for your chat automation works you neet to run one of each service and make sure both the Boundary and the Module connects to the Gateway. I have not created a buildscript for that yet so for now you need to do it manually. Next we will see how to accomplish that.
