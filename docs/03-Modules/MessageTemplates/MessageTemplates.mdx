@@ -1,0 +1,114 @@
+---
+sidebar_position: 5
+---
+
+# Message Templates
+
+You can specify templates for messages with a `.kozz.md` file. It supports having parts of your message in bold, italic, monospace, tables and variable interpolation. It's a great way to abstract the templating of messages from the behaviour itself. You can overrite the file without needing to restart the module and the changes to the template will take effect.
+
+- Create a `messages.kozz.md` file
+- Paste this inside the file:
+
+```markdown
+> @foo
+
+# This is the foo message
+
+The foo message says "Hi" to {{name}}
+
+_Nice to meet you!_
+
+> ---
+
+> @bar
+
+# This is the bar message
+
+The foo message says "GoodBye" to {{name}}
+
+_See you soon!_
+
+> ---
+```
+
+Now lets create a simple module that responds to a command:
+
+```typescript
+const myModule = createModule({
+  name: "foobar",
+  address: "http://127.0.0.1:4521",
+  // Path to the file you created
+  templatePath: "src/messages.kozz.md",
+  commands: {
+    boundariesToHandle: ["*"],
+    methods: {
+      ...createMethod("foo", (requester) => {
+        // Reples with Foo message
+        requester.reply.withTemplate("foo", {
+          name: requester.rawCommand.message.contact.publicName,
+        });
+      }),
+      // Reples with Bar message
+      ...createMethod("bar", (requester) => {
+        requester.reply.withTemplate("bar", {
+          name: requester.rawCommand.message.contact.publicName,
+        });
+      }),
+    },
+  },
+});
+```
+
+You will see that the response you get is just the same as described in the `messages.kozz.md` file. You can see the basic syntax on how it works but it's cool to provide you the rules on how to declare message templates:
+
+- Messages start with `> @MessageName`
+- `# Header` Defines a Header. The text that follows the `#` will be sent on bold and the next line will be skipped.
+- `- Item` Defines an item from a list. The content will be idented right and the `-` will be sent with the message.
+- `` `code` `` makes the text be sent as monospace.
+- `_*highlight*_` makes the text be sent with bold and italic
+- In order to skip a line, use a line with nothing but `<br>`.
+- Messages ends with `> ---`
+- You can have as many message templates in the file as you want.
+
+### Challenge
+
+Now put your knowledge to the test! Define this message template and make the bot send you this message on your command
+
+```markdown
+> @MyMessage
+
+# This is the header. It can't interpolate variables.
+
+# This is a list. The items can't interpolate variables or styles yet.
+
+- item 1
+- item 2
+- item 3
+  <br>
+
+# This is a table:
+
+`| Command       | Bot's Response                   |`
+`| ------------- | -------------------------------- |`
+`| !ping         | pong!                            |`
+`| !ping default | pong!                            |`
+`| !ping blah    | Ooops, this method doesn't exist |`
+<br>
+
+_Note:_ Be careful not to make wide tables, most chat's will automatically break lines that become too long.
+<br>
+
+Text _*bold*_ _italic_ and `monospace` can appear in the same line, but you can't mix and match them
+In order to skip a line, use a line with nothing but `"<br>"`
+<br>
+<br>
+<br>
+
+Messages start with `"> @messageName"` and end with `"> ---"`
+
+> ---
+```
+
+The result should be something like this:
+
+<img src="/img/Challange.jpg" />
