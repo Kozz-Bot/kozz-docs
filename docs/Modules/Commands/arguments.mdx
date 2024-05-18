@@ -60,4 +60,8 @@ const defaultMethod = createMethod("default", (requester, args) => {}, {
 });
 ```
 
-The command will need to something similar to `--myNumber 123 --myBoolean false`. It wil also be able to capture arguments like `--foo 26` but this will be optional, because `foo` is defined as `number?`
+The only arguments that are necessary for the command to run in are `myNumber` and `myBoolean`. A valid args list can look like any of these: 
+ - `--myNumber 1234 --myBoolean`
+ - `--myNumber 1234 --myBoolean false --foo 123`
+ - `--myNumber 1234 --myBoolean true --bar`
+ - `--myBoolean --myNumber 1337 --maybeString this is my optional string`

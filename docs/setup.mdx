@@ -4,8 +4,6 @@ sidebar_position: 2
 
 # Setup
 
-The setup is yet very complicated and convoluted. I will work on some buildscript for a simple hello-world example in a near future. For now, you have to set all up manually.
-
 - Create a folder with the name of your project and `cd` into it
 
 ```bash
@@ -16,25 +14,9 @@ cd my-bot
 - Run the following script. It will clone all the repositories, install the dependencies and build them
 
 ```bash
-# this one has to be the first
-git clone git@github.com:Kozz-Bot/kozz-types.git
-cd kozz-types
-yarn && yarn tsc
-cd ..
 
 git clone git@github.com:Kozz-Bot/Kozz-Gateway.git
 cd Kozz-Gateway
-yarn && yarn tsc
-cd ..
-
-
-git clone git@github.com:Kozz-Bot/kozz-module-maker.git
-cd kozz-module-maker
-yarn && yarn tsc
-cd ..
-
-git clone git@github.com:Kozz-Bot/kozz-wa.git
-cd kozz-wa
 yarn && yarn tsc
 cd ..
 ```
@@ -42,22 +24,37 @@ cd ..
 - Run this script to generate a keypair to authenticate with the gateway
 
 ```bash
-cd kozz-module-maker
-./scripts/generate_key_pair.sh
+# if you are using linux/mac-os
+cd kozz-gw && ./scripts/generate_key_pair.sh
 ```
 
-You shall see a folder `./keys` with a public and a private key in the `kozz-module-maker` root folder
+```bash
+# if you are using windows
+cd kozz-gw 
+./scripts/generate_key_pair.ps1
+```
+
+You shall see a folder `./keys` with a public and a private key in the `kozz-gw` root folder
 
 ```
-└── kozz-module-maker/
+└── kozz-gw/
     └── keys/
         ├── publickey.pem
         └── privatekey.pem
 ```
 
-_Note:_ This assumes you are running the script on linux. If you are using windows, you can manually generate a key pair using putty-keygen and drop them in the correct folders
+- Add the Whatsapp boudary to your bot's folder
 
-- Now copy the public key to the Gateway's keys folder
+```bash
+# if you are using linux/mac-os
+./scripts/add_boundary.sh wa
+```
+```bash
+# if you are using windows
+./scripts/add_boundary.ps1 wa
+```
+
+- Now leave the public key in the Gateway's keys folder
 
 ```
 └── kozz-gw/
@@ -65,7 +62,7 @@ _Note:_ This assumes you are running the script on linux. If you are using windo
         └── publickey.pem (this file)
 ```
 
-- And the private key into the `kozz-wa/keys` folder
+- And copy the private key into the `kozz-wa/keys` folder
 
 ```
 └── kozz-gw/
@@ -73,14 +70,14 @@ _Note:_ This assumes you are running the script on linux. If you are using windo
         └── privatekey.pem (this file)
 ```
 
-- Start the Gateway and go back to the root
+- Start the Gateway in one terminal
 
 ```bash
 cd kozz-gw
 yarn start
 ```
 
-- Start whatsapp service, authenticate and go back to the root
+- Start whatsapp in another terminal and authenticate with whatsapp scanning the QR-code
 
 ```bash
 cd kozz-wa
@@ -97,7 +94,7 @@ _Note²_: The name of the Whatsapp client will be `'Kozz-Whatsapp'`. Its importa
 mkdir my-bot-modules
 ls
 # The output should look like this
-# Kozz-Gateway/  kozz-module-maker/  kozz-types/  kozz-wa/  my-bot-modules/
+# Kozz-Gateway/ kozz-wa/  my-bot-modules/
 cd my-bot-modules
 ```
 
@@ -105,7 +102,8 @@ cd my-bot-modules
 
 ```bash
 yarn init
-yarn add ../kozz-module-maker
+yarn add kozz-module-maker
+yarn add -D kozz-types
 ```
 
 Finally, you are all set!

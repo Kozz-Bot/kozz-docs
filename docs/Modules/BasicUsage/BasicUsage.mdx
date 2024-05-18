@@ -1,0 +1,27 @@
+---
+sidebar_position: 1
+---
+
+# Basic Usage
+
+Let's see how we send a message to a given contact programatically:
+
+```typescript
+import { createModule } from "kozz-module-maker";
+
+const myModule = createModule({
+  name: "ping",
+  // The defaut address of the gateway
+  address: "http://127.0.0.1:4521",
+});
+ 
+setTimeout(() => {
+  myModule.sendMessage(
+    `${phone_number_with_country_code}@c.us`,
+    "Kozz-Whatsapp",
+    "Hello from Kozz-Bot!"
+  );
+}, 3000);
+```
+
+This will make the module send a message to the provided number though whatsapp with the body `Hello from Kozz-Bot`. It's important to know the name of the boundary of which you want to send the message, otherwise the message won't be delivered.

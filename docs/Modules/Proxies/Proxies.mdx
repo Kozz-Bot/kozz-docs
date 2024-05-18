@@ -4,9 +4,9 @@ sidebar_position: 3
 
 # Message Proxy
 
-Message proxy is the automatic forwarding of messages to another service that wants to listen to them. Those messages can be forwarded to any Boundary or Module.
+You can tell the gateway that you want to listen to every single message that a given boundary receives. This can be further filtered by chat-id or any chat at all. Check the example below
 
-Let's create a simple message proxy that listens to all the messages from our whatsapp boundary:
+Let's create a simple message proxy that listens to all the messages from a given boundary:
 
 ```typescript
 const myModule = createModule({
@@ -21,12 +21,12 @@ const myModule = createModule({
         }(${message.contact.id})\n\t"${message.body}"`
       );
     },
-    source: "Kozz-Whatsapp/*",
+    source: `${boundaryName}/*`,
   },
 });
 ```
 
-You shall start to see every message from your whatsapp showing up on the console.
+You shall start to see every message from your boundary showing up on the console.
 
 The property `proxy.source` controls what chats you want to listen. The format of the string is `BoundaryID/ChatID`, where the BoundaryID is the name you gave to the boundary and the ChatID can be discovered by logging the `message.to` property.
 
@@ -34,7 +34,7 @@ You can also change the `ChatID` to the wildcard `*` in order to listen to all m
 
 ## Overriding Destination
 
-You can make module request the forwarding of messages to another module other than itself.
+You can make module request the forwarding of messages to another module or boundary other than itself.
 
 ```typescript
 import { Source } from "kozz-types";

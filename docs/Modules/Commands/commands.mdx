@@ -10,9 +10,9 @@ One way of telling the gateway to send payloads to the module is by creating com
 
 The Kozz-Bot gateway has an in-built CLI-ish like parser which we will make use of.
 
-Since the name of our module is `ping`, whenever someone sends a message starting with `!ping`, the gateway will know the author of the message is trying to talk to our module.
+Since the name of our module is `ping`, whenever someone sends a message starting with `/ping`, the gateway will know the author of the message is trying to talk to our module.
 
-The second word of the command is the module. Basically it has to correspond to a method defined in our module. Lets define a method for our module so that it can awnser our command.
+The second word of the command correspond to a method defined in our module. Lets define a method for our module so that it can awnser our command.
 
 Your code should look like this:
 
@@ -36,9 +36,9 @@ Try restarting your module and sending `!ping test`. The bot should reply `pong!
 
 Lets break down even further what is going on:
 
-- With the object `comands` you define that this module will awnser to commands.
+- With the object `commands` you define that this module will awnser to commands.
 - The properties `BoundariesToHandle` defines from which boundaries you want to process commands. `*` is the way to awnser from all the boundaries
-- You define a method called `test` that only replies `pong!`. What the method will do is mainly defined by the `requester` object
+- Evoking `createMethod` you define a method called `test` that only replies `pong!`. The interface for communication with the boundary is mainly defined by the `requester` object
 
 However, you don't want to have to use two words for a command. You want to use `!ping`. How can we accomplish that?
 

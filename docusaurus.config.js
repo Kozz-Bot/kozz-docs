@@ -14,12 +14,7 @@ const config = {
   url: "https://kozz-bot.github.io",
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
-  baseUrl: "/",
-
-  // GitHub pages deployment config.
-  // If you aren't using GitHub pages, you don't need these.
-  organizationName: "Kozz-Bot", // Usually your GitHub org/user name.
-  projectName: "Kozz-Bot.github.io", // Usually your repo name.
+  baseUrl: "/kozz-docs/",
 
   onBrokenLinks: "throw",
   onBrokenMarkdownLinks: "warn",

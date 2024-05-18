@@ -4,7 +4,7 @@ sidebar_position: 4
 
 # Resources
 
-The modules can request information from each other using an API called `Resource asking`.
+The modules can request information from each other using an HTTP-ish API.
 
 Let's create a module that gets the url of your profile picture:
 
@@ -26,8 +26,6 @@ myModule.ask
     console.log(response);
   });
 ```
-
-The Kozz-Whatsapp boundary is prepared to provide some resources. But you can also insert resources into yout modules and have them exchanging data with each other.
 
 ## Managing Resources Inside Modules
 
@@ -86,14 +84,12 @@ const myOtherModule = createModule({
 });
 
 setTimeout(() => {
-  myOtherModule.ask
-    .handler("MyModule", "Double", {
-      //send argument
-      number: 10,
-    })
+  myOtherModule.ask.handler("MyModule", "Double", 
+    // send argument
+    { number: 10 })
     .then(({ response }) => {
       // response is "The double of 10 is 20"
-      myOtherModule.sendMessage(contactId, "Gramonta-Wa", response);
+      myOtherModule.sendMessage(contactId, "Kozz-Whatsapp", response);
     });
 }, 1000);
 ```
