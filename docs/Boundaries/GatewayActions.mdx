@@ -1,0 +1,120 @@
+---
+sidebar_position: 2
+---
+
+# Gateway Actions
+
+Boundaries receive gateway actions when modules ask to send, reply, react or delete messages.
+
+`kozz-boundary-maker` exposes handler registration helpers for those actions. The boundary implementation should translate each payload into platform SDK calls.
+
+## Reply With Text
+
+```ts
+boundary.handleReplyWithText((payload, companion, body) => {
+  platform.sendText(payload.chatId, body, {
+    quotedMessageId: payload.quoteId,
+    mentions: companion.mentions,
+  });
+});
+```
+
+Use this for command replies that should quote the original message when the platform supports it.
+
+## Reply With Media
+
+```ts
+boundary.handleReplyWithMedia((payload, companion, caption) => {
+  platform.sendMedia(payload.chatId, payload.media, {
+    caption,
+    quotedMessageId: payload.quoteId,
+    mentions: companion.mentions,
+  });
+});
+```
+
+## Reply With Sticker
+
+```ts
+boundary.handleReplyWithSticker((payload, companion, caption) => {
+  platform.sendSticker(payload.chatId, payload.media, {
+    caption,
+    quotedMessageId: payload.quoteId,
+    mentions: companion.mentions,
+  });
+});
+```
+
+Some platforms do not have native stickers. In that case, the boundary can either convert the media to the closest supported format or ignore the action with a warning.
+
+## Send Message
+
+```ts
+boundary.handleSendMessage((payload, companion, body) => {
+  platform.sendText(payload.chatId, body, {
+    mentions: companion.mentions,
+  });
+});
+```
+
+This is used when a module sends a message to a chat without replying to a specific incoming message.
+
+## Send Message With Media
+
+```ts
+boundary.handleSendMessageWithMedia((payload, companion, caption) => {
+  platform.sendMedia(payload.chatId, payload.media, {
+    caption,
+    mentions: companion.mentions,
+  });
+});
+```
+
+## Send Message With Sticker
+
+```ts
+boundary.handleSendMessageWithSticker((payload, companion, caption) => {
+  platform.sendSticker(payload.chatId, payload.media, {
+    caption,
+    mentions: companion.mentions,
+  });
+});
+```
+
+## React to Message
+
+```ts
+boundary.handleReactMessage(payload => {
+  platform.react(payload.messageId, payload.emote);
+});
+```
+
+## Delete Message
+
+The current helper name is misspelled for compatibility:
+
+```ts
+boundary.hanldeDeleteMessage(payload => {
+  platform.deleteMessage(payload.messageId);
+});
+```
+
+## Payload Translation
+
+The boundary should handle these translation details:
+
+- converting Kozz media objects to the platform's upload format;
+- mapping mentions from `companion.mentions`;
+- quoting `payload.quoteId` when available;
+- preserving captions;
+- applying platform-specific constraints for stickers, audio and video;
+- handling failures without crashing the boundary process.
+
+## Inline Commands
+
+Before action callbacks run, `kozz-boundary-maker` parses inline commands in the message body and returns:
+
+- `companion`: metadata such as mentions;
+- `body` or `caption`: final text after inline command processing.
+
+Boundary action handlers should use the parsed string passed to the callback instead of reading `payload.body` directly.

@@ -1,0 +1,110 @@
+---
+sidebar_position: 3
+---
+
+# Boundary Resources
+
+Boundaries can expose platform-specific data as resources.
+
+Modules ask these resources through the gateway:
+
+```ts
+const { response } = await requester.ask.boundary(
+  'kozz-baileys',
+  'chat_status'
+);
+```
+
+## Registering Resources
+
+Use `onAskResource` inside the boundary:
+
+```ts
+boundary.onAskResource('chat_status', () => ({
+  ready: true,
+}));
+```
+
+Resource getters receive the request data:
+
+```ts
+boundary.onAskResource('contact_profile_pic', async ({ id }) => {
+  return platform.getProfilePictureUrl(id);
+});
+```
+
+Getters can return values directly or return promises.
+
+## Asking Boundary Resources
+
+From a command handler:
+
+```ts
+const { response } = await requester.ask.boundary(
+  requester.message.boundaryName,
+  'contact_profile_pic',
+  {
+    id: requester.message.contact.id,
+  }
+);
+```
+
+From a module instance:
+
+```ts
+const { response } = await module.ask.boundary(
+  'kozz-baileys',
+  'chat_status'
+);
+```
+
+## Resource Naming
+
+Use short snake_case names:
+
+```text
+chat_status
+contact_info
+group_chat_info
+recent_chat_messages
+```
+
+Avoid names that include platform implementation details unless the resource truly is platform-specific.
+
+## Privacy and Scope
+
+Boundary resources often expose sensitive platform state. Keep resource arguments scoped to the current message when possible.
+
+For chat history, derive the chat from the current command:
+
+```ts
+const { response } = await requester.ask.boundary(
+  requester.message.boundaryName,
+  'recent_chat_messages',
+  {
+    chatId: requester.message.to,
+    limit: 200,
+    excludeMessageId: requester.message.id,
+  }
+);
+```
+
+Do not accept arbitrary chat IDs from user input, external APIs or LLM tool calls unless the module explicitly implements an authorization layer.
+
+## `kozz-baileys` Resources
+
+The current WhatsApp boundary exposes:
+
+- `contact_profile_pic`
+- `group_chat_info`
+- `group_admin_list`
+- `unread_count`
+- `chat_details`
+- `contact_info`
+- `chat_order`
+- `chat_status`
+- `all_groups`
+- `all_private_chats`
+- `recent_chat_messages`
+
+These resources are backed by WhatsApp APIs and the local Realm store maintained by the boundary.

@@ -2,113 +2,228 @@
 sidebar_position: 5
 ---
 
-# Message Templates
+# Message Components
 
-You can specify templates for messages with a `.kozz.md` file. It supports having parts of your message in bold, italic, monospace, tables and variable interpolation. It's a great way to abstract the templating of messages from the behaviour itself. You can overrite the file without needing to restart the module and the changes to the template will take effect.
+Message templates are now written as JSX/TSX components. This replaces the older `.kozz.md` template files.
 
-- Create a `messages.kozz.md` file
-- Paste this inside the file:
+The old `templatePath`, `loadTemplates` and `requester.reply.withTemplate(...)` flow is considered legacy. Prefer regular TypeScript components rendered directly in replies.
 
-```markdown
-> @foo
+## Why TSX Components?
 
-# This is the foo message
+TSX message components let you:
 
-The foo message says "Hi" to {{name}}
+- keep message rendering close to module code;
+- use TypeScript props for template data;
+- share helpers across messages;
+- render lists and conditionals with normal code;
+- avoid a custom markdown-like template syntax.
 
-_Nice to meet you!_
+## Setup
 
-> ---
+`kozz-module-maker` exports a small JSX runtime and message formatting components.
 
-> @bar
+For projects compiled with Babel, configure React automatic runtime with `kozz-module-maker/dist` as the import source:
 
-# This is the bar message
-
-The foo message says "GoodBye" to {{name}}
-
-_See you soon!_
-
-> ---
+```json title=".babelrc"
+{
+  "presets": [
+    "@babel/preset-typescript",
+    [
+      "@babel/preset-react",
+      {
+        "runtime": "automatic",
+        "importSource": "kozz-module-maker/dist"
+      }
+    ]
+  ]
+}
 ```
 
-Now lets create a simple module that responds to a command:
+In `tsconfig.json`, keep JSX syntax available to your build pipeline:
 
-```typescript
-const myModule = createModule({
-  name: "foobar",
-  address: "http://127.0.0.1:4521",
-  // Path to the file you created
-  templatePath: "src/messages.kozz.md",
+```json title="tsconfig.json"
+{
+  "compilerOptions": {
+    "jsx": "preserve"
+  }
+}
+```
+
+If you use another build tool, configure it to use the automatic JSX runtime from `kozz-module-maker/dist`.
+
+## Basic Message
+
+Create a component:
+
+```tsx title="src/messages.tsx"
+import { Bold, Line } from 'kozz-module-maker';
+
+export const Greeting = ({ name }: { name: string }) => {
+  return (
+    <>
+      <Line>
+        Hello, <Bold>{name}</Bold>!
+      </Line>
+      <Line>Welcome to Kozz Bot.</Line>
+    </>
+  );
+};
+```
+
+Use it inside a command:
+
+```tsx title="src/index.tsx"
+import { createMethod, createModule } from 'kozz-module-maker';
+import { Greeting } from './messages';
+
+const hello = createMethod('hello', requester => {
+  requester.reply(
+    <Greeting name={requester.message.contact.publicName || 'there'} />
+  );
+});
+
+createModule({
+  name: 'demo',
+  address: 'ws://localhost:4521',
   commands: {
-    boundariesToHandle: ["*"],
+    boundariesToHandle: ['*'],
     methods: {
-      ...createMethod("foo", (requester) => {
-        // Reples with Foo message
-        requester.reply.withTemplate("foo", {
-          name: requester.rawCommand.message.contact.publicName,
-        });
-      }),
-      // Reples with Bar message
-      ...createMethod("bar", (requester) => {
-        requester.reply.withTemplate("bar", {
-          name: requester.rawCommand.message.contact.publicName,
-        });
-      }),
+      ...hello,
     },
   },
 });
 ```
 
-You will see that the response you get is just the same as described in the `messages.kozz.md` file. You can see the basic syntax on how it works but it's cool to provide you the rules on how to declare message templates:
+Calling `!demo hello` replies with the rendered message.
 
-- Messages start with `> @MessageName`
-- `# Header` Defines a Header. The text that follows the `#` will be sent on bold and the next line will be skipped.
-- `- Item` Defines an item from a list. The content will be idented right and the `-` will be sent with the message.
-- `` `code` `` makes the text be sent as monospace.
-- `_*highlight*_` makes the text be sent with bold and italic
-- In order to skip a line, use a line with nothing but `<br>`.
-- Messages ends with `> ---`
-- You can have as many message templates in the file as you want.
+## Formatting Components
 
-### Challenge
+`kozz-module-maker` currently exports these message components:
 
-Now put your knowledge to the test! Define this message template and make the bot send you this message on your command
+- `Line`: renders one line and appends a line break.
+- `Bold`: renders bold text.
+- `Italic`: renders italic text.
+- `Stroke`: renders strikethrough text.
+- `Code`: renders a multi-line monospace block.
+- `Monospace`: renders inline monospace text.
+- `Paragraph`: renders a bold paragraph-like heading.
+- `ListItem`: renders an indented list item.
+- `List`: renders one or more list items from strings.
+- `ForEach`: renders a component for each item in an array.
+- `Render`: conditionally renders children.
 
-```markdown
-> @MyMessage
+Example:
 
-# This is the header. It can't interpolate variables.
+```tsx
+import { Bold, Code, ForEach, Line, ListItem, Render } from 'kozz-module-maker';
 
-# This is a list. The items can't interpolate variables or styles yet.
+type RankingEntry = {
+  name: string;
+  points: number;
+};
 
-- item 1
-- item 2
-- item 3
-  <br>
+export const Ranking = ({ entries }: { entries: RankingEntry[] }) => {
+  return (
+    <>
+      <Line>
+        <Bold>Ranking</Bold>
+      </Line>
+      <Render when={entries.length === 0}>
+        <Line>No entries yet.</Line>
+      </Render>
+      <Render when={entries.length > 0}>
+        <Code>
+          <ForEach
+            data={entries}
+            render={(entry, index) => (
+              <Line>
+                {index + 1}. {entry.name.padEnd(20, ' ')} {entry.points}
+              </Line>
+            )}
+          />
+        </Code>
+      </Render>
+    </>
+  );
+};
+```
 
-# This is a table:
+For a simpler list:
 
-`| Command       | Bot's Response                   |`
-`| ------------- | -------------------------------- |`
-`| !ping         | pong!                            |`
-`| !ping default | pong!                            |`
-`| !ping blah    | Ooops, this method doesn't exist |`
-<br>
+```tsx
+import { ForEach, ListItem } from 'kozz-module-maker';
 
-_Note:_ Be careful not to make wide tables, most chat's will automatically break lines that become too long.
-<br>
+export const Commands = ({ commands }: { commands: string[] }) => (
+  <>
+    <ForEach
+      data={commands}
+      render={command => <ListItem>{command}</ListItem>}
+    />
+  </>
+);
+```
 
-Text _*bold*_ _italic_ and `monospace` can appear in the same line, but you can't mix and match them
-In order to skip a line, use a line with nothing but `"<br>"`
-<br>
-<br>
-<br>
+## Replying With Components
 
-Messages start with `"> @messageName"` and end with `"> ---"`
+Every text reply accepts rendered JSX:
+
+```tsx
+requester.reply(<Greeting name="Ada" />);
+```
+
+You can also send generated component text through other message APIs that accept a string body, because the JSX runtime resolves to text.
+
+## Help Resources
+
+If your module exposes a `help` resource, the getter can return a component:
+
+```tsx
+import { Bold, Line } from 'kozz-module-maker';
+
+const Help = () => (
+  <>
+    <Line>
+      <Bold>demo</Bold>
+    </Line>
+    <Line>!demo hello - sends a greeting</Line>
+  </>
+);
+
+createModule({
+  name: 'demo',
+  address: 'ws://localhost:4521',
+}).resources.upsertResource('help', () => <Help />);
+```
+
+## Legacy `.kozz.md` Templates
+
+Older modules may still use:
+
+```ts
+templatePath: 'src/messages.kozz.md'
+requester.reply.withTemplate('Help')
+```
+
+This API is kept for compatibility with existing modules, but new modules should not use it. Prefer TSX message components and direct replies.
+
+When migrating, move each template into a typed component:
+
+```md
+> @Greeting
+
+# Hello {{name}}
 
 > ---
 ```
 
-The result should be something like this:
+becomes:
 
-<img src="/img/Challange.jpg" />
+```tsx
+import { Bold, Line } from 'kozz-module-maker';
+
+export const Greeting = ({ name }: { name: string }) => (
+  <Line>
+    <Bold>Hello {name}</Bold>
+  </Line>
+);
+```

@@ -1,0 +1,68 @@
+---
+sidebar_position: 4
+---
+
+# Forwardable Events
+
+Boundaries can emit named events through the gateway without sending a chat message.
+
+Use this for lifecycle events, platform notifications and UI-oriented updates.
+
+## Emitting Events
+
+```ts
+boundary.emitForwardableEvent('chat_ready', {
+  ready: true,
+});
+```
+
+The gateway forwards the event to modules or boundaries that registered listeners for that event and source.
+
+## Group Helpers
+
+`kozz-boundary-maker` includes helpers for common group events:
+
+```ts
+boundary.emitUserJoinedGroup(payload);
+boundary.emitUserLeftGroup(payload);
+```
+
+These emit:
+
+- `user_joined_group`
+- `user_left_group`
+
+## Listening From Modules
+
+Modules listen with `module.on(...)`:
+
+```ts
+module.on('chat_ready', 'kozz-baileys', payload => {
+  console.log('Boundary is ready', payload);
+});
+```
+
+See the module event forwarding page for the full listener behavior.
+
+## Current `kozz-baileys` Events
+
+New boundaries should prefer descriptive event names such as `chat_ready`.
+
+The current `kozz-baileys` boundary has one legacy lifecycle event name and one chat ordering event:
+
+- `kozz-iwac`: lifecycle notification. The payload is one of `qr_code`, `chat_ready` or `reconnecting`.
+- `chat_order_move_to_top`: a message updated the chat order.
+
+```ts
+module.on('kozz-iwac', 'kozz-baileys', event => {
+  if (event === 'chat_ready') {
+    console.log('WhatsApp boundary is ready');
+  }
+});
+```
+
+## Event Payloads
+
+Event payloads are not schema-validated by the gateway. The boundary and listeners should agree on the shape.
+
+Keep payloads small. If consumers need larger data, expose a resource and emit an event that tells them when to ask for it.

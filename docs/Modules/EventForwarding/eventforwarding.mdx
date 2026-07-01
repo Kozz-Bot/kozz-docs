@@ -101,35 +101,23 @@ otherModule.on('my_custom_event', 'my-module-name', payload => {
 
 ## Built-in Boundary Events
 
-`kozz-baileys` currently emits these forwardable events:
+New boundaries should prefer descriptive event names such as `chat_ready` and `reconnecting`.
 
-### `qr_code`
+`kozz-baileys` currently emits one legacy lifecycle event and one chat ordering event:
 
-Emitted when a WhatsApp QR code is available.
+### `kozz-iwac`
 
-```ts
-myModule.on('qr_code', 'kozz-baileys', () => {
-  console.log('A QR code is available');
-});
-```
+Emitted when the WhatsApp lifecycle state changes. The payload is one of:
 
-### `chat_ready`
-
-Emitted when the WhatsApp connection is open or online.
+- `qr_code`
+- `chat_ready`
+- `reconnecting`
 
 ```ts
-myModule.on('chat_ready', 'kozz-baileys', () => {
-  console.log('WhatsApp is ready');
-});
-```
-
-### `reconnecting`
-
-Emitted when the boundary is reconnecting after a non-logout disconnect.
-
-```ts
-myModule.on('reconnecting', 'kozz-baileys', () => {
-  console.log('Boundary is reconnecting');
+myModule.on('kozz-iwac', 'kozz-baileys', event => {
+  if (event === 'chat_ready') {
+    console.log('WhatsApp is ready');
+  }
 });
 ```
 

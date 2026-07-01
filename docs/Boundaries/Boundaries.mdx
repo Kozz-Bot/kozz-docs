@@ -1,83 +1,61 @@
 ---
-sidebar_position: 6
+sidebar_position: 7
 ---
 
 # Boundaries
 
-A boundary is a service that connects Kozz Bot to a chat platform. It receives platform-specific events, converts them into Kozz payloads and sends them to the gateway.
+A boundary is a service that connects Kozz Bot to a chat platform.
 
-Boundaries also receive gateway events such as:
+It owns the platform SDK, translates platform-specific payloads into Kozz payloads, and handles gateway requests such as sending messages, replying, reacting and deleting.
 
-- `send_message`
-- `send_message_with_media`
-- `reply_with_text`
-- `reply_with_media`
-- `reply_with_sticker`
-- `react_message`
-- `delete_message`
-- `ask_resource`
+The gateway does not know how WhatsApp, Discord, Telegram or any other platform works. It only knows the boundary protocol.
 
-## WhatsApp Boundary: `kozz-baileys`
+## Responsibilities
 
-The current WhatsApp boundary is [`kozz-baileys`](https://github.com/Kozz-Bot/kozz-baileys). It uses Baileys to connect to WhatsApp and `kozz-boundary-maker` to communicate with the gateway.
+A boundary is responsible for:
 
-Default configuration:
+- connecting to one chat platform;
+- introducing itself to the gateway;
+- emitting normalized messages;
+- handling outbound gateway events;
+- exposing platform resources;
+- emitting forwardable events;
+- translating Kozz media and mentions into platform-specific calls.
 
-```bash
-GATEWAY_URL=ws://localhost:4521
-BOUNDARY_NAME=kozz-baileys
-```
+## Helper Library
 
-When a WhatsApp message arrives, the boundary creates a normalized `MessageReceived` payload with fields such as:
+New boundaries should use `kozz-boundary-maker`. It provides:
 
-```ts
-{
-  id: string;
-  body: string;
-  santizedBody: string;
-  from: string;
-  to: string;
-  chatId: string;
-  boundaryName: string;
-  contact: ContactPayload;
-  messageType: 'TEXT' | 'IMAGE' | 'VIDEO' | 'AUDIO' | 'STICKER';
-  quotedMessage?: MessageReceived;
-  media?: Media;
-  taggedContacts: ContactPayload[];
-  timestamp: number;
-}
-```
+- Socket.io connection to the gateway;
+- signed introduction payloads;
+- event handlers for gateway actions;
+- resource response plumbing;
+- forwardable event emission;
+- inline command parsing helpers.
 
-The boundary stores messages, contacts, chats and media metadata in a local Realm database. Modules can ask boundary resources instead of duplicating chat state.
-
-## Boundary Resources
-
-`kozz-baileys` currently exposes resources including:
-
-- `contact_profile_pic`
-- `group_chat_info`
-- `group_admin_list`
-- `unread_count`
-- `chat_details`
-- `contact_info`
-- `chat_order`
-- `chat_status`
-- `all_groups`
-- `all_private_chats`
-- `recent_chat_messages`
-
-Example:
+## Typical Boundary Shape
 
 ```ts
-const { response } = await requester.ask.boundary(
-  requester.message.boundaryName,
-  'recent_chat_messages',
-  {
-    chatId: requester.message.to,
-    limit: 200,
-    excludeMessageId: requester.message.id,
-  }
-);
+import createBoundary from 'kozz-boundary-maker';
+
+const boundary = createBoundary({
+  url: process.env.GATEWAY_URL ?? 'ws://localhost:4521',
+  socketPath: process.env.SOCKET_PATH,
+  chatPlatform: 'MyPlatform',
+  name: process.env.BOUNDARY_NAME ?? 'my-boundary',
+});
+
+boundary.handleReplyWithText((payload, companion, body) => {
+  // Send a text reply through the platform SDK.
+});
+
+boundary.onAskResource('chat_status', () => ({
+  ready: true,
+}));
 ```
 
-For privacy, modules should always derive `chatId` from the current message when asking for chat history. Do not accept arbitrary chat IDs from user input or LLM tool calls.
+## Current Boundary
+
+The current WhatsApp implementation is [`kozz-baileys`](https://github.com/Kozz-Bot/kozz-baileys), powered by Baileys.
+
+It is an implementation example of the boundary protocol, not the only possible boundary. Other platforms can integrate with Kozz by emitting the same normalized events and handling the same gateway actions.

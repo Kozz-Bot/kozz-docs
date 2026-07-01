@@ -1,0 +1,154 @@
+---
+sidebar_position: 5
+---
+
+# `kozz-baileys`
+
+`kozz-baileys` is the current WhatsApp boundary implementation.
+
+It uses:
+
+- Baileys for WhatsApp connectivity;
+- `kozz-boundary-maker` for the gateway protocol;
+- Realm for local chat, contact, message and media metadata;
+- utility converters for media, stickers and downloads.
+
+## Configuration
+
+Common environment variables:
+
+```bash
+GATEWAY_URL=ws://localhost:4521
+BOUNDARY_NAME=kozz-baileys
+SOCKET_PATH=
+```
+
+`BOUNDARY_NAME` is the service name modules use when they send messages or ask resources.
+
+## Startup Flow
+
+On startup, `kozz-baileys`:
+
+1. creates the boundary with `createBoundary`;
+2. initializes local folders;
+3. starts a Baileys session;
+4. registers gateway action handlers;
+5. registers boundary resources;
+6. emits normalized messages to the gateway.
+
+## Message Normalization
+
+Incoming WhatsApp messages are transformed into Kozz `MessageReceived` payloads:
+
+```ts
+{
+  id: string;
+  body: string;
+  santizedBody: string;
+  from: string;
+  fromHostAccount: boolean;
+  to: string;
+  chatId: string;
+  boundaryName: string;
+  platform: 'Baileys';
+  messageType: 'TEXT' | 'IMAGE' | 'VIDEO' | 'AUDIO' | 'STICKER';
+  contact: ContactPayload;
+  quotedMessage?: MessageReceived;
+  media?: Media;
+  taggedContacts: ContactPayload[];
+  timestamp: number;
+}
+```
+
+The boundary also resolves quoted messages and downloads media when possible.
+
+## Local Store
+
+`kozz-baileys` stores:
+
+- messages;
+- contacts;
+- media metadata;
+- group chats;
+- private chats;
+- chat metadata;
+- LID to phone-number mappings when available.
+
+This store lets modules ask boundary resources instead of maintaining separate copies of WhatsApp state.
+
+## Resources
+
+The boundary exposes:
+
+- `contact_profile_pic`
+- `group_chat_info`
+- `group_admin_list`
+- `unread_count`
+- `chat_details`
+- `contact_info`
+- `chat_order`
+- `chat_status`
+- `all_groups`
+- `all_private_chats`
+- `recent_chat_messages`
+
+Example:
+
+```ts
+const { response } = await requester.ask.boundary(
+  requester.message.boundaryName,
+  'group_chat_info',
+  {
+    id: requester.message.to,
+  }
+);
+```
+
+## Recent Chat Messages
+
+`recent_chat_messages` reads the latest messages from the local Realm database, filtered by chat before materializing results.
+
+```ts
+const { response } = await requester.ask.boundary(
+  requester.message.boundaryName,
+  'recent_chat_messages',
+  {
+    chatId: requester.message.to,
+    limit: 200,
+    excludeMessageId: requester.message.id,
+  }
+);
+```
+
+The boundary clamps `limit` between `1` and `1000`.
+
+## Forwardable Events
+
+`kozz-baileys` emits one legacy lifecycle event and one chat ordering event:
+
+- `kozz-iwac`: lifecycle notification. The payload is `qr_code`, `chat_ready` or `reconnecting`.
+- `chat_order_move_to_top`: emitted with the chat ID after a message updates chat ordering.
+
+Modules can listen through event forwarding:
+
+```ts
+module.on('kozz-iwac', 'kozz-baileys', event => {
+  if (event === 'chat_ready') {
+    console.log('WhatsApp boundary is ready');
+  }
+});
+```
+
+## Media Handling
+
+The boundary handles:
+
+- text messages;
+- image, video and audio messages;
+- stickers;
+- media replies;
+- sticker conversion;
+- media downloads;
+- quoted media when available.
+
+Boundary implementations for other platforms can choose different media strategies as long as they produce and consume Kozz `Media` payloads.

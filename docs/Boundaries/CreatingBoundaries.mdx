@@ -1,0 +1,128 @@
+---
+sidebar_position: 1
+---
+
+# Creating Boundaries
+
+Use `kozz-boundary-maker` to create a boundary service.
+
+```ts
+import createBoundary from 'kozz-boundary-maker';
+
+const boundary = createBoundary({
+  url: process.env.GATEWAY_URL ?? 'ws://localhost:4521',
+  socketPath: process.env.SOCKET_PATH,
+  chatPlatform: 'MyPlatform',
+  name: process.env.BOUNDARY_NAME ?? 'my-boundary',
+});
+```
+
+## Init Options
+
+```ts
+type InitOptions = {
+  url: string;
+  socketPath?: string;
+  chatPlatform: Platform;
+  name: string;
+  inlineCommandMap?: Partial<InlineCommandMap>;
+};
+```
+
+### `url`
+
+Gateway Socket.io URL.
+
+```ts
+url: 'ws://localhost:4521'
+```
+
+### `socketPath`
+
+Optional custom Socket.io path. Use this when the gateway is served behind a reverse proxy or mounted on a custom path.
+
+```ts
+socketPath: '/socket.io/'
+```
+
+### `chatPlatform`
+
+Platform identifier used in the boundary introduction payload. The current WhatsApp boundary uses:
+
+```ts
+chatPlatform: 'Baileys'
+```
+
+### `name`
+
+Stable boundary name. Modules use this name when they send messages or ask boundary resources.
+
+```ts
+name: 'kozz-baileys'
+```
+
+Keep the name stable across restarts. If it changes, modules configured to talk to the previous name will stop finding the boundary.
+
+### `inlineCommandMap`
+
+Optional map of inline commands supported by outbound messages. Inline commands are parsed by `kozz-boundary-maker` before a boundary sends text through the platform SDK.
+
+## Authentication
+
+On connection, the boundary sends an `introduction` payload signed with `keys/privatekey.pem`.
+
+The gateway verifies it with `keys/publickey.pem`.
+
+The boundary project must contain:
+
+```text
+keys/privatekey.pem
+```
+
+See the setup page for key generation.
+
+## Emitting Messages to the Gateway
+
+A boundary emits incoming chat messages with:
+
+```ts
+boundary.emitMessage(messagePayload);
+```
+
+The payload should be normalized into Kozz's `MessageReceived` shape.
+
+```ts
+{
+  id: string;
+  body: string;
+  santizedBody: string;
+  from: string;
+  to: string;
+  chatId: string;
+  boundaryName: string;
+  contact: ContactPayload;
+  messageType: 'TEXT' | 'IMAGE' | 'VIDEO' | 'AUDIO' | 'STICKER';
+  quotedMessage?: MessageReceived;
+  media?: Media;
+  taggedContacts: ContactPayload[];
+  timestamp: number;
+}
+```
+
+The gateway receives this message, runs proxies and then attempts command parsing.
+
+## Group Events
+
+Boundaries can emit common group events:
+
+```ts
+boundary.emitUserJoinedGroup(payload);
+boundary.emitUserLeftGroup(payload);
+```
+
+These are forwarded as:
+
+- `user_joined_group`
+- `user_left_group`
+
+Modules can listen to them with event forwarding.
