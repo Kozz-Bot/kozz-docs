@@ -1,0 +1,96 @@
+---
+sidebar_position: 1
+---
+
+# Gramonta Bot AI
+
+Gramonta Bot includes an AI module exposed through the `!ai` command.
+
+Text responses use a single entry point:
+
+```text
+!ai <question or instruction>
+```
+
+Examples:
+
+```text
+!ai resume a conversa
+!ai qual foi a festa que o Pedro foi?
+!ai o que a gente combinou sobre domingo?
+```
+
+Legacy text commands such as `!ai talk` and `!ai summary` are deprecated. They reply with a short migration message and point users back to `!ai`.
+
+## Text Flow
+
+When a user sends a text prompt:
+
+1. the gateway routes the command to the `ai` module;
+2. the module sends the prompt to the LLM with tool definitions;
+3. the LLM decides whether it needs a tool;
+4. the module executes the selected tool;
+5. the module sends the tool result back to the LLM for a final answer;
+6. the bot replies in the chat.
+
+The final answer should use the CalvoGPT format:
+
+```text
+[#CalvoGPT]: resposta
+```
+
+## Tools
+
+The AI module currently exposes tools for:
+
+- web search;
+- "tia do zap" messages;
+- recent chat context.
+
+### Web Search
+
+The model should use web search for recent or changing information such as news, prices, weather, sports results, launches and anything that may be outdated.
+
+### Tia Message Search
+
+The model can request a short query for messages such as:
+
+- bom dia;
+- boa tarde;
+- boa noite;
+- parabens;
+- reflexao;
+- mensagem motivacional.
+
+### Chat Context
+
+The model can request recent messages from the current WhatsApp chat with:
+
+```ts
+{
+  limit: number
+}
+```
+
+The model does not choose the chat ID. The module always injects it from the current command message:
+
+```ts
+chatId: requester.message.to
+```
+
+This prevents context from one chat being exposed in another chat.
+
+The Baileys boundary reads the messages from its Realm database through the `recent_chat_messages` resource. The returned messages are lightweight: timestamp, author, body, media presence and display name.
+
+## Other AI Commands
+
+The `ai` module still keeps specialized commands for non-text workflows:
+
+- `!ai image <prompt>`
+- `!ai image-styles`
+- `!ai transcribe`
+- `!ai emojify`
+- `!ai read-image`
+- `!ai speak`
+
+These commands are intentionally separate because they trigger a specific media operation rather than a plain text conversation.

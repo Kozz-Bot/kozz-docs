@@ -4,53 +4,104 @@ sidebar_position: 5
 
 # Gateway
 
-It's the Gateway's job to receive all the events from every single boundary connected to it and then decide what to do with those event payloads.
+The gateway is the routing service of Kozz Bot. Boundaries and modules connect to it through Socket.io, introduce themselves with a signed payload and then exchange events through the gateway.
 
-It will try to parse any message into an command and, if the parsing is sucessfull, try to find the corresponding module to send the command to.
+By default the gateway listens on:
 
-It will also manage all the connections and authentication with every single boundary and module. It will manage reconnections, inspecting payloads to see if they are malformed, the proxying of messages, the receivement and providing of resources and much more. It is by far the most complicated part of the system.
+```text
+ws://localhost:4521
+```
 
-## Resources
+It also exposes an Express API server on port `3878`.
 
-The gateway can also provide resources when a boundary or handler ask. Those resources at the moment are:
+## Responsibilities
 
-### All Boundaries:
+The gateway is responsible for:
 
-Provides all boundaries that are currently connected with the gateway.
+- authenticating boundaries and modules;
+- tracking connected services;
+- parsing chat messages into commands;
+- routing commands to modules;
+- forwarding replies, media, reactions and deletes to boundaries;
+- managing message proxies;
+- forwarding resource requests and responses;
+- exposing gateway-level resources.
+
+## Message Flow
+
+When a boundary emits a `message` event:
+
+1. the gateway enriches it with boundary metadata;
+2. configured proxies receive the message first;
+3. the gateway attempts to parse the message as a command;
+4. if parsing succeeds, it finds a module with the same name as the command;
+5. the command payload is emitted to that module.
+
+For example, `!ai qual foi a festa que o Pedro foi?` is parsed as:
+
+```json
+{
+  "module": "ai",
+  "method": "qual",
+  "query": "qual foi a festa que o Pedro foi?"
+}
+```
+
+If the module does not implement the parsed method, `kozz-module-maker` can route it to a `fallback` method.
+
+## Gateway Resources
+
+Modules and boundaries can ask the gateway for built-in resources.
+
+### `all_boundaries`
+
+Returns every connected boundary.
 
 ```json
 {
   "response": [
     {
-      "id": "3fxwNQovfSt9YJsLAAAe", // Connection ID
+      "id": "3fxwNQovfSt9YJsLAAAe",
       "boundary": {
-        "name": "Kozz-Whatsapp", // Boundary Name
-        "platform": "WA", // WA = Whatsapp
-        "OS": "linux", // Platform on which the boundary's client is running
-        "listeners": [] // Forwardable Events listeners
+        "name": "kozz-baileys",
+        "platform": "Baileys",
+        "OS": "linux",
+        "listeners": []
       }
     }
   ]
 }
 ```
 
-### All Handlers
+### `all_modules`
 
-Provides all modules that are currently connected with the gateway.
+Returns every connected module.
 
 ```json
 {
   "response": [
     {
-      "name": "tia", //Module Name
+      "name": "ai",
       "handler": {
-        "id": "Y-y40LFeMN-xI920AAAB", // Connection ID
-        "methods": ["fallback", "default"], // Methods attatched to the module
-        "listeners": [] // Forwardable Events listeners
+        "id": "Y-y40LFeMN-xI920AAAB",
+        "methods": ["fallback", "image", "transcribe"],
+        "listeners": []
       }
     }
   ]
 }
 ```
 
-_Note:_ Writing the docs I figured the properties "name" and "id" of the boundaries and modules are in different places. I'll make the responses more coherent soon.
+### `all_proxies`
+
+Returns the active message proxy rules.
+
+## Authentication
+
+Every boundary and module signs its introduction payload with `keys/privatekey.pem`. The gateway verifies it with `keys/publickey.pem`.
+
+If a service cannot connect, check:
+
+- the key files exist in the expected folders;
+- the service points to the correct `GATEWAY_URL`;
+- the gateway and service agree on the socket path if `SOCKET_PATH` is configured.

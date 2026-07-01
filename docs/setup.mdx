@@ -4,106 +4,121 @@ sidebar_position: 2
 
 # Setup
 
-- Create a folder with the name of your project and `cd` into it
+This page describes the current local development setup for a Kozz environment with the gateway, the Baileys WhatsApp boundary and a module project such as Gramonta Bot.
+
+## Clone the Repositories
 
 ```bash
-mkdir my-bot
-cd my-bot
+mkdir my-kozz-workspace
+cd my-kozz-workspace
+
+git clone git@github.com:Kozz-Bot/Kozz-Gateway.git kozz-gw
+git clone git@github.com:Kozz-Bot/kozz-baileys.git kozz-baileys
+git clone git@github.com:Kozz-Bot/Gramonta-Bot.git kozz-gramonta-bot
 ```
 
-- Run the following script. It will clone all the repositories, install the dependencies and build them
+Install dependencies in each repository:
 
 ```bash
-
-git clone git@github.com:Kozz-Bot/Kozz-Gateway.git
-cd Kozz-Gateway
-yarn && yarn tsc
-cd ..
+cd kozz-gw && bun install
+cd ../kozz-baileys && bun install
+cd ../kozz-gramonta-bot && bun install
 ```
 
-- Run this script to generate a keypair to authenticate with the gateway
+## Generate Gateway Keys
 
-```bash
-# if you are using linux/mac-os
-cd kozz-gw && ./scripts/generate_key_pair.sh
-```
-
-```bash
-# if you are using windows
-cd kozz-gw 
-./scripts/generate_key_pair.ps1
-```
-
-You shall see a folder `./keys` with a public and a private key in the `kozz-gw` root folder
-
-```
-└── kozz-gw/
-    └── keys/
-        ├── publickey.pem
-        └── privatekey.pem
-```
-
-- Add the Whatsapp boudary to your bot's folder
-
-```bash
-# if you are using linux/mac-os
-./scripts/add_boundary.sh wa
-```
-```bash
-# if you are using windows
-./scripts/add_boundary.ps1 wa
-```
-
-- Now leave the public key in the Gateway's keys folder
-
-```
-└── kozz-gw/
-    └── keys/
-        └── publickey.pem (this file)
-```
-
-- And copy the private key into the `kozz-wa/keys` folder
-
-```
-└── kozz-gw/
-    └── keys/
-        └── privatekey.pem (this file)
-```
-
-- Start the Gateway in one terminal
+The gateway authenticates boundaries and modules using an RSA key pair.
 
 ```bash
 cd kozz-gw
-yarn start
+./scripts/generate_key_pair.sh
 ```
 
-- Start whatsapp in another terminal and authenticate with whatsapp scanning the QR-code
+On Windows, use:
+
+```powershell
+cd kozz-gw
+./scripts/generate_key_pair.ps1
+```
+
+The command creates:
+
+```text
+kozz-gw/
+└── keys/
+    ├── publickey.pem
+    └── privatekey.pem
+```
+
+Keep `publickey.pem` in the gateway. Copy `privatekey.pem` into every service that must authenticate with the gateway:
+
+```text
+kozz-baileys/keys/privatekey.pem
+kozz-gramonta-bot/keys/privatekey.pem
+```
+
+## Configure Environment Variables
+
+The most common variables are:
 
 ```bash
-cd kozz-wa
-yarn start
+GATEWAY_URL=ws://localhost:4521
+BOUNDARY_NAME=kozz-baileys
+SOCKET_PATH=
 ```
 
-_Note¹_: Do the authentication scanning the QR code in the terminal. For more anwsers, visit https://wwebjs.dev/guide/#first-steps
-_Note²_: The name of the Whatsapp client will be `'Kozz-Whatsapp'`. Its important to keep track of the name of the services for reasons you will see in the future. Check the .env.example to see how to change values.
+`BOUNDARY_NAME` matters because modules use it when they ask resources or send messages through a specific boundary. Some older deployments still use names such as `Gramonta-Wa`; keep the configured name consistent across the boundary and modules.
 
-- Create the folder you want to instantiate the modules for controlling your chat and copy the privatekey into the corresponding folder
+## Start the Services
+
+Start the gateway:
 
 ```bash
-# Make sure you are in the folder you cloned all the repositories
-mkdir my-bot-modules
-ls
-# The output should look like this
-# Kozz-Gateway/ kozz-wa/  my-bot-modules/
-cd my-bot-modules
+cd kozz-gw
+bun run start
 ```
 
-- Init your node project and install the module maker dependency
+Start the WhatsApp boundary:
 
 ```bash
-yarn init
-yarn add kozz-module-maker
-yarn add -D kozz-types
+cd kozz-baileys
+bun run start
 ```
 
-Finally, you are all set!
+The boundary will ask you to authenticate with WhatsApp. Scan the QR code from the terminal output.
+
+Start your module project:
+
+```bash
+cd kozz-gramonta-bot
+bun run start
+```
+
+## Development Commands
+
+The projects use slightly different build scripts:
+
+```bash
+# Gateway
+cd kozz-gw
+bun run start
+
+# Baileys boundary
+cd kozz-baileys
+bun run start
+
+# Gramonta Bot
+cd kozz-gramonta-bot
+bun run build
+bun run start
+```
+
+For type-checking during development:
+
+```bash
+cd kozz-baileys
+./node_modules/.bin/tsc --project tsconfig.json
+
+cd ../kozz-gramonta-bot
+./node_modules/.bin/tsc --project tsconfig.json --noEmit
+```

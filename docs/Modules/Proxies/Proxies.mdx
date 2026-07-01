@@ -47,7 +47,7 @@ const myModule = createModule({
     onMessage: (requester) => {
       //Do nothing
     },
-    source: "Kozz-Whatsapp/*",
+    source: "kozz-baileys/*",
     // send it to "MyOtherModule"
     destinationOverride: "MyOtherModule",
   },
@@ -95,7 +95,7 @@ const myModule = createModule({
         myModule.proxy.revoke();
       }
     },
-    source: "Kozz-Whatsapp/*",
+    source: "kozz-baileys/*",
   },
 });
 ```

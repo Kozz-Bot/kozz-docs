@@ -4,6 +4,80 @@ sidebar_position: 6
 
 # Boundaries
 
-Those are the services that carry the client to interface with the chat of any given platform.
+A boundary is a service that connects Kozz Bot to a chat platform. It receives platform-specific events, converts them into Kozz payloads and sends them to the gateway.
 
-#### Soon there will be a guide on how to transform any chat into a Boundary compatible with Kozz-Bot
+Boundaries also receive gateway events such as:
+
+- `send_message`
+- `send_message_with_media`
+- `reply_with_text`
+- `reply_with_media`
+- `reply_with_sticker`
+- `react_message`
+- `delete_message`
+- `ask_resource`
+
+## WhatsApp Boundary: `kozz-baileys`
+
+The current WhatsApp boundary is [`kozz-baileys`](https://github.com/Kozz-Bot/kozz-baileys). It uses Baileys to connect to WhatsApp and `kozz-boundary-maker` to communicate with the gateway.
+
+Default configuration:
+
+```bash
+GATEWAY_URL=ws://localhost:4521
+BOUNDARY_NAME=kozz-baileys
+```
+
+When a WhatsApp message arrives, the boundary creates a normalized `MessageReceived` payload with fields such as:
+
+```ts
+{
+  id: string;
+  body: string;
+  santizedBody: string;
+  from: string;
+  to: string;
+  chatId: string;
+  boundaryName: string;
+  contact: ContactPayload;
+  messageType: 'TEXT' | 'IMAGE' | 'VIDEO' | 'AUDIO' | 'STICKER';
+  quotedMessage?: MessageReceived;
+  media?: Media;
+  taggedContacts: ContactPayload[];
+  timestamp: number;
+}
+```
+
+The boundary stores messages, contacts, chats and media metadata in a local Realm database. Modules can ask boundary resources instead of duplicating chat state.
+
+## Boundary Resources
+
+`kozz-baileys` currently exposes resources including:
+
+- `contact_profile_pic`
+- `group_chat_info`
+- `group_admin_list`
+- `unread_count`
+- `chat_details`
+- `contact_info`
+- `chat_order`
+- `chat_status`
+- `all_groups`
+- `all_private_chats`
+- `recent_chat_messages`
+
+Example:
+
+```ts
+const { response } = await requester.ask.boundary(
+  requester.message.boundaryName,
+  'recent_chat_messages',
+  {
+    chatId: requester.message.to,
+    limit: 200,
+    excludeMessageId: requester.message.id,
+  }
+);
+```
+
+For privacy, modules should always derive `chatId` from the current message when asking for chat history. Do not accept arbitrary chat IDs from user input or LLM tool calls.

@@ -4,24 +4,35 @@ sidebar_position: 1
 
 # Kozz Bot
 
-Kozz Bot is a general purpose chat automation tool. Its focused on being a distributed system with high independence of the modules and easy multiplatform integration. It's written in typescript, uses a microsservices architecture and the services communicate with [Socket.io](https://socket.io).
+Kozz Bot is a distributed chat automation framework written in TypeScript. It is built around small services that communicate through [Socket.io](https://socket.io), so chat integrations, command handlers, dashboards and automation modules can evolve independently.
 
-## Disclaimer
+The project is currently composed of three main runtime roles:
 
-The chatbots are supposed to work in a distributed environment: multiple instances of different services working together. They all talk to each other via websocket, using [Socket.io](https://socket.io). There is no such thing as a single repo (yet) for all your chat automation needs because it requires different pieces being connected depending on what you want to build.
+- **Gateway**: receives events from every service and routes commands, resources, proxied messages and replies.
+- **Boundary**: connects Kozz to a chat platform. The current WhatsApp boundary is `kozz-baileys`.
+- **Module**: defines behavior. Modules can expose commands, listen to proxied messages, ask resources from other services and send messages through boundaries.
 
-You may think this is a very convoluted way to create a simple chatbot and right now, that is the case. This is a tool focused on a more robust use and requires a little bit more infrastructure than simply running a node instance. I'm still planning on creating docker images and buildscripts of preset environments for more simple usages though. Any help would be much appreciated!
+## Repositories
 
-This tool is coming to it's alpha stage. There will be many bugs. Do not use this for professional use. You can help me reporting bugs and giving suggestions on my discord server
+The current workspace is split into these repositories:
 
-The only chat integration I've made so far is with Whatsapp, using [Whatsapp-web.js](https://wwebjs.dev). That means the only platform you can automate right now is whatsapp though the wwebjs lib. If you want to integrate this tool with other platforms, please contact me and we will work toghether!
+- [`Kozz-Gateway`](https://github.com/Kozz-Bot/Kozz-Gateway): the Socket.io gateway and API server.
+- [`kozz-baileys`](https://github.com/Kozz-Bot/kozz-baileys): the WhatsApp boundary powered by Baileys.
+- [`Gramonta-Bot`](https://github.com/Kozz-Bot/Gramonta-Bot): a real bot implementation built with Kozz modules.
+- [`kozz-docs`](https://github.com/Kozz-Bot/kozz-docs): this Docusaurus documentation site.
 
-## Architecture
+## Current Status
 
-There are three types of microsservices.
+Kozz Bot is still experimental. It is useful for personal automation and bot experiments, but the public APIs and repository layout may still change.
 
-- The Module defines behaviour
-- The Boundary interfaces the chat
-- The Gateway orchestrates the communication between the microsservices
+The WhatsApp integration currently uses Baileys. Older references to `kozz-wa`, `Kozz-Whatsapp` or `Whatsapp-web.js` are legacy names and should be treated as historical unless a specific project still uses them.
 
-In order for your chat automation works you neet to run one of each service and make sure both the Boundary and the Module connects to the Gateway. I have not created a buildscript for that yet so for now you need to do it manually. Next we will see how to accomplish that.
+## Runtime Flow
+
+1. A boundary receives a chat event from a platform.
+2. The boundary normalizes the event into a Kozz payload and emits it to the gateway.
+3. The gateway forwards the message through configured proxies, then tries to parse it as a command.
+4. If a matching module is connected, the gateway sends the command payload to that module.
+5. The module can reply, send media, react to messages, delete messages, ask resources or call other APIs.
+
+This design is more infrastructure-heavy than a single-process chatbot, but it keeps platform integration, routing and behavior isolated.

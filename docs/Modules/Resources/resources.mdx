@@ -19,7 +19,7 @@ const myModule = createModule({
 });
 
 myModule.ask
-  .boundary("Kozz-Whatsapp", "contact_profile_pic", {
+  .boundary("kozz-baileys", "contact_profile_pic", {
     id: contactId,
   })
   .then(({ response }) => {
@@ -52,7 +52,7 @@ const myOtherModule = createModule({
 setTimeout(() => {
   myOtherModule.ask.handler("MyModule", "MyMessage").then(({ response }) => {
     // response is "Hello from Kozz-Bot!"
-    myOtherModule.sendMessage(contactId, "Kozz-Whatsapp", response);
+    myOtherModule.sendMessage(contactId, "kozz-baileys", response);
   });
 }, 1000);
 ```
@@ -89,7 +89,7 @@ setTimeout(() => {
     { number: 10 })
     .then(({ response }) => {
       // response is "The double of 10 is 20"
-      myOtherModule.sendMessage(contactId, "Kozz-Whatsapp", response);
+      myOtherModule.sendMessage(contactId, "kozz-baileys", response);
     });
 }, 1000);
 ```
@@ -141,3 +141,55 @@ const myOtherModule = createModule({
 ```
 
 Type `!doubler --number 10` and you shall see the bot replying with `The double of 10 is 20`.
+
+## Common Baileys Boundary Resources
+
+The `kozz-baileys` boundary exposes resources that let modules reuse chat state already stored by the boundary instead of keeping their own duplicated cache.
+
+Current resources include:
+
+- `contact_profile_pic`
+- `group_chat_info`
+- `group_admin_list`
+- `unread_count`
+- `chat_details`
+- `contact_info`
+- `chat_order`
+- `chat_status`
+- `all_groups`
+- `all_private_chats`
+- `recent_chat_messages`
+
+### Recent Chat Messages
+
+`recent_chat_messages` returns recent messages from one chat, ordered from oldest to newest within the requested window.
+
+```typescript
+const { response } = await requester.ask.boundary(
+  requester.message.boundaryName,
+  "recent_chat_messages",
+  {
+    chatId: requester.message.to,
+    limit: 200,
+    excludeMessageId: requester.message.id,
+  }
+);
+```
+
+Arguments:
+
+- `chatId`: the WhatsApp chat ID to read.
+- `limit`: number of recent messages to return. The boundary clamps it between `1` and `1000`.
+- `excludeMessageId`: optional message ID to omit from the response, usually the command message itself.
+
+The resource returns lightweight message data: author, timestamp, body, media presence and contact display name. It does not return raw WhatsApp payloads or media bodies.
+
+### Privacy Rule
+
+When a module asks for chat history, always use the current command message as the source of `chatId`.
+
+```typescript
+chatId: requester.message.to
+```
+
+Do not let users, external APIs or LLM tool calls provide arbitrary chat IDs. This prevents context from one chat leaking into another.
