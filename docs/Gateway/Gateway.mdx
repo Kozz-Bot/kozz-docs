@@ -37,13 +37,16 @@ When a boundary emits a `message` event:
 4. if parsing succeeds, it finds a module with the same name as the command;
 5. the command payload is emitted to that module.
 
-For example, `!ai qual foi a festa que o Pedro foi?` is parsed as:
+For example, `!weather today --city Sao Paulo` is parsed as:
 
 ```json
 {
-  "module": "ai",
-  "method": "qual",
-  "query": "qual foi a festa que o Pedro foi?"
+  "module": "weather",
+  "method": "today",
+  "query": "today",
+  "namedArgs": {
+    "city": "Sao Paulo"
+  }
 }
 ```
 

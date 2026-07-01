@@ -1,0 +1,97 @@
+---
+sidebar_position: 3
+---
+
+# Libraries
+
+Kozz services share a small set of helper libraries. They hide most of the Socket.io protocol details so application code can focus on boundaries and modules.
+
+## `kozz-module-maker`
+
+`kozz-module-maker` is the library used to create module services.
+
+It provides helpers for:
+
+- connecting a module to the gateway;
+- declaring command methods;
+- validating named command arguments;
+- replying with text, media, stickers and templates;
+- sending messages through boundaries;
+- asking resources from handlers, boundaries and the gateway;
+- registering resources exposed by the module;
+- adding middleware with `module.use`;
+- rendering message bodies with JSX-style components.
+
+Minimal module:
+
+```ts
+import { createMethod, createModule } from 'kozz-module-maker';
+
+const defaultMethod = createMethod('default', requester => {
+  requester.reply('pong!');
+});
+
+createModule({
+  name: 'ping',
+  address: 'ws://localhost:4521',
+  commands: {
+    boundariesToHandle: ['*'],
+    methods: {
+      ...defaultMethod,
+    },
+  },
+});
+```
+
+With a resource:
+
+```ts
+const module = createModule({
+  name: 'profile',
+  address: 'ws://localhost:4521',
+});
+
+module.resources.upsertResource('status', () => ({
+  ready: true,
+}));
+```
+
+## `kozz-boundary-maker`
+
+`kozz-boundary-maker` is the library used to create boundary services.
+
+A boundary wraps one chat platform and is responsible for:
+
+- introducing itself to the gateway;
+- emitting normalized chat messages;
+- handling gateway requests to send, reply, react or delete messages;
+- exposing platform-specific resources;
+- supporting inline commands and forwardable events.
+
+The current WhatsApp boundary, `kozz-baileys`, is implemented with this library.
+
+Conceptual boundary shape:
+
+```ts
+import createBoundary from 'kozz-boundary-maker';
+
+const boundary = createBoundary({
+  url: process.env.GATEWAY_URL ?? 'ws://localhost:4521',
+  chatPlatform: 'MyPlatform',
+  name: process.env.BOUNDARY_NAME ?? 'my-boundary',
+});
+
+boundary.handleReplyWithText((payload, companion, body) => {
+  // Send text through your platform SDK.
+});
+
+boundary.onAskResource('chat_status', () => ({
+  ready: true,
+}));
+```
+
+## `kozz-types`
+
+`kozz-types` contains shared TypeScript types for commands, messages, media, contacts, boundaries, handlers, proxies and resources.
+
+Use it when building modules or boundaries that need to type payloads exchanged with the gateway.
