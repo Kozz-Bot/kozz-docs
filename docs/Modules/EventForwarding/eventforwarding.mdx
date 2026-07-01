@@ -4,4 +4,201 @@ sidebar_position: 5
 
 # Forwarding Events
 
-## [TODO] This is not yet complete
+Forwarding events are lightweight pub/sub messages routed through the gateway. They are useful when a service needs to react to lifecycle events or platform events without receiving every chat message through a proxy.
+
+Use event forwarding when you need small event notifications such as:
+
+- a boundary finished connecting;
+- a QR code is available;
+- a chat order changed;
+- a platform-specific event happened;
+- another service emitted a custom event.
+
+Use a message proxy when you need to inspect every message from a boundary or chat.
+
+## Concepts
+
+There are three parts in the event forwarding flow:
+
+- **source**: the boundary or module that emits the event;
+- **destination**: the boundary or module that wants to receive it;
+- **event name**: the string used to route the event.
+
+The gateway stores listeners on connected services. When the source emits an event, the gateway forwards it only to destinations listening to that event from that source.
+
+## Listening From a Module
+
+Modules created with `kozz-module-maker` expose an `on` method:
+
+```ts
+const listener = myModule.on('chat_ready', 'kozz-baileys', payload => {
+  console.log('Boundary is ready', payload);
+});
+```
+
+Arguments:
+
+- first argument: event name;
+- second argument: source boundary or module name;
+- third argument: callback.
+
+The call returns an object with:
+
+```ts
+{
+  eventId: string;
+  revoke: () => void;
+}
+```
+
+You can revoke the listener:
+
+```ts
+listener.revoke();
+```
+
+## Emitting From a Boundary
+
+Boundaries created with `kozz-boundary-maker` can emit forwardable events:
+
+```ts
+boundary.emitForwardableEvent('chat_ready', {
+  ready: true,
+});
+```
+
+The boundary sends this to the gateway as a `forward_event`. The gateway then forwards it to every matching listener.
+
+`kozz-boundary-maker` also has helpers for common group events:
+
+```ts
+boundary.emitUserJoinedGroup(payload);
+boundary.emitUserLeftGroup(payload);
+```
+
+These emit `user_joined_group` and `user_left_group`.
+
+## Emitting From a Module
+
+Modules do not currently expose a high-level `emitForwardableEvent` helper in `kozz-module-maker`. If you need module-originated forwarded events, use the underlying socket:
+
+```ts
+myModule.socket.emit('forward_event', {
+  eventName: 'my_custom_event',
+  payload: {
+    value: 123,
+  },
+});
+```
+
+Other modules can listen to it using the source module name:
+
+```ts
+otherModule.on('my_custom_event', 'my-module-name', payload => {
+  console.log(payload.value);
+});
+```
+
+## Built-in Boundary Events
+
+`kozz-baileys` currently emits these forwardable events:
+
+### `qr_code`
+
+Emitted when a WhatsApp QR code is available.
+
+```ts
+myModule.on('qr_code', 'kozz-baileys', () => {
+  console.log('A QR code is available');
+});
+```
+
+### `chat_ready`
+
+Emitted when the WhatsApp connection is open or online.
+
+```ts
+myModule.on('chat_ready', 'kozz-baileys', () => {
+  console.log('WhatsApp is ready');
+});
+```
+
+### `reconnecting`
+
+Emitted when the boundary is reconnecting after a non-logout disconnect.
+
+```ts
+myModule.on('reconnecting', 'kozz-baileys', () => {
+  console.log('Boundary is reconnecting');
+});
+```
+
+### `chat_order_move_to_top`
+
+Emitted after a message is saved and the chat should move to the top of a UI list.
+
+```ts
+myModule.on('chat_order_move_to_top', 'kozz-baileys', chatId => {
+  console.log('Chat moved to top', chatId);
+});
+```
+
+## Gateway Chat Events
+
+The gateway also forwards some explicit chat event messages emitted to it:
+
+- `chat_react_message`
+- `chat_edit_message`
+- `postman_debug`
+
+These are routed with the event name above and the original payload.
+
+## Wildcard Sources
+
+Some gateway-side forwarding paths support `*` as a listener source. This means "receive this event regardless of source".
+
+```ts
+myModule.on('chat_react_message', '*', payload => {
+  console.log(payload);
+});
+```
+
+Prefer specific source names when possible. Wildcards are useful for dashboards or monitoring modules.
+
+## Reconnect Behavior
+
+`kozz-module-maker` stores registered listeners in memory and re-sends `event_forward_request` after the module socket reconnects.
+
+This means normal temporary disconnects should not require manual re-registration.
+
+## Event Forwarding vs Message Proxy
+
+Use event forwarding for low-volume named events:
+
+```ts
+myModule.on('chat_ready', 'kozz-baileys', callback);
+```
+
+Use a proxy for message streams:
+
+```ts
+createModule({
+  name: 'logger',
+  address: 'ws://localhost:4521',
+  proxy: {
+    source: 'kozz-baileys/*',
+    onMessage: requester => {
+      console.log(requester.message.body);
+    },
+  },
+});
+```
+
+Event forwarding does not replace proxies. It is a targeted event notification mechanism, while proxies are for chat message traffic.
+
+## Current Limitations
+
+- Boundary events are the most mature path.
+- Module-originated events require using `module.socket.emit('forward_event', ...)`.
+- Listener revocation is available through the object returned by `module.on(...)`.
+- Event payloads are not schema-validated by the gateway; source and destination services should agree on payload shape.
