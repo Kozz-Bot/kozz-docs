@@ -101,6 +101,8 @@ The current WhatsApp boundary exposes:
 - `unread_count`
 - `chat_details`
 - `contact_info`
+- `lid_from_jid`
+- `jid_from_lid`
 - `chat_order`
 - `chat_status`
 - `all_groups`
@@ -108,3 +110,32 @@ The current WhatsApp boundary exposes:
 - `recent_chat_messages`
 
 These resources are backed by WhatsApp APIs and the local Realm store maintained by the boundary.
+
+### LID Mapping Resources
+
+WhatsApp may use both phone-number JIDs and LID JIDs for the same contact.
+`kozz-baileys` persists known mappings and exposes both lookup directions:
+
+```ts
+const { response } = await requester.ask.boundary(
+  requester.message.boundaryName,
+  'lid_from_jid',
+  {
+    id: '5511999999999@s.whatsapp.net',
+  }
+);
+```
+
+`lid_from_jid` returns `{ id, lid }`, where `lid` is `string | null`.
+
+```ts
+const { response } = await requester.ask.boundary(
+  requester.message.boundaryName,
+  'jid_from_lid',
+  {
+    id: '123456789@lid',
+  }
+);
+```
+
+`jid_from_lid` returns `{ id, jid }`, where `jid` is `string | null`.

@@ -154,6 +154,8 @@ Current resources include:
 - `unread_count`
 - `chat_details`
 - `contact_info`
+- `lid_from_jid`
+- `jid_from_lid`
 - `chat_order`
 - `chat_status`
 - `all_groups`
@@ -183,6 +185,35 @@ Arguments:
 - `excludeMessageId`: optional message ID to omit from the response, usually the command message itself.
 
 The resource returns lightweight message data: author, timestamp, body, media presence and contact display name. It does not return raw WhatsApp payloads or media bodies.
+
+### LID Mapping
+
+Use `lid_from_jid` and `jid_from_lid` when a module needs to consolidate
+WhatsApp phone-number JIDs and LID JIDs.
+
+```typescript
+const { response } = await requester.ask.boundary(
+  requester.message.boundaryName,
+  "lid_from_jid",
+  {
+    id: "5511999999999@s.whatsapp.net",
+  }
+);
+```
+
+`response.lid` is the known `@lid` value or `null`.
+
+```typescript
+const { response } = await requester.ask.boundary(
+  requester.message.boundaryName,
+  "jid_from_lid",
+  {
+    id: "123456789@lid",
+  }
+);
+```
+
+`response.jid` is the known `@s.whatsapp.net` value or `null`.
 
 ### Privacy Rule
 

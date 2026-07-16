@@ -11,6 +11,7 @@ It uses:
 - Baileys for WhatsApp connectivity;
 - `kozz-boundary-maker` for the gateway protocol;
 - Realm for local chat, contact, message and media metadata;
+- SQLite for Baileys auth credentials and Signal key state;
 - utility converters for media, stickers and downloads.
 
 ## Configuration
@@ -21,9 +22,13 @@ Common environment variables:
 GATEWAY_URL=ws://localhost:4521
 BOUNDARY_NAME=kozz-baileys
 SOCKET_PATH=
+BAILEYS_AUTH_DB_PATH=./baileys-auth.sqlite
 ```
 
 `BOUNDARY_NAME` is the service name modules use when they send messages or ask resources.
+
+`BAILEYS_AUTH_DB_PATH` is optional. When omitted, the boundary stores Baileys auth
+state in `./baileys-auth.sqlite`.
 
 ## Startup Flow
 
@@ -31,10 +36,11 @@ On startup, `kozz-baileys`:
 
 1. creates the boundary with `createBoundary`;
 2. initializes local folders;
-3. starts a Baileys session;
-4. registers gateway action handlers;
-5. registers boundary resources;
-6. emits normalized messages to the gateway.
+3. opens the SQLite auth store and migrates legacy `./creds/*.json` files if needed;
+4. starts a Baileys session;
+5. registers gateway action handlers;
+6. registers boundary resources;
+7. emits normalized messages to the gateway.
 
 ## Message Normalization
 
@@ -62,6 +68,22 @@ Incoming WhatsApp messages are transformed into Kozz `MessageReceived` payloads:
 
 The boundary also resolves quoted messages and downloads media when possible.
 
+## Auth Store
+
+Baileys credentials and Signal key state are stored in SQLite through a custom
+auth state adapter. This replaces Baileys `useMultiFileAuthState('./creds')` for
+runtime use.
+
+The store:
+
+- writes credentials and key updates into `baileys_auth_state`;
+- uses Baileys `BufferJSON` serialization so buffers round-trip correctly;
+- enables SQLite WAL mode and a busy timeout for safer concurrent key updates;
+- migrates existing files from `./creds` the first time `creds.json` is missing
+  from SQLite.
+
+The SQLite database and WAL files are runtime state and should not be committed.
+
 ## Local Store
 
 `kozz-baileys` stores:
@@ -76,6 +98,26 @@ The boundary also resolves quoted messages and downloads media when possible.
 
 This store lets modules ask boundary resources instead of maintaining separate copies of WhatsApp state.
 
+## LID and Phone-Number Mapping
+
+WhatsApp may identify the same contact with a phone-number JID such as
+`5511999999999@s.whatsapp.net` and a LID JID such as `123456789@lid`.
+
+`kozz-baileys` persists LID/phone-number mappings separately from contacts so
+the mapping is not lost when WhatsApp sends it before the contact exists in the
+local store.
+
+Mappings are captured from:
+
+- `messaging-history.set` payloads with `lidPnMappings`;
+- Baileys `lid-mapping.update` events;
+- Baileys `chats.phoneNumberShare` events;
+- message keys that include `senderLid`/`senderPn` or `participantLid`/`participantPn`.
+
+Message normalization resolves known LIDs to phone-number JIDs for contact
+identity. Message count and ranking features should use the mapping helpers to
+consolidate aliases before grouping by sender.
+
 ## Resources
 
 The boundary exposes:
@@ -86,6 +128,8 @@ The boundary exposes:
 - `unread_count`
 - `chat_details`
 - `contact_info`
+- `lid_from_jid`
+- `jid_from_lid`
 - `chat_order`
 - `chat_status`
 - `all_groups`
@@ -103,6 +147,38 @@ const { response } = await requester.ask.boundary(
   }
 );
 ```
+
+### LID Lookup Resources
+
+Use `lid_from_jid` to resolve a phone-number JID to a LID:
+
+```ts
+const { response } = await requester.ask.boundary(
+  requester.message.boundaryName,
+  'lid_from_jid',
+  {
+    id: '5511999999999@s.whatsapp.net',
+  }
+);
+
+// response: { id: string; lid: string | null }
+```
+
+Use `jid_from_lid` to resolve a LID back to a phone-number JID:
+
+```ts
+const { response } = await requester.ask.boundary(
+  requester.message.boundaryName,
+  'jid_from_lid',
+  {
+    id: '123456789@lid',
+  }
+);
+
+// response: { id: string; jid: string | null }
+```
+
+Both resources return `null` when WhatsApp has not provided the mapping yet.
 
 ## Recent Chat Messages
 
