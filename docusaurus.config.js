@@ -10,10 +10,7 @@ const config = {
   tagline: "Chat automation tool",
   favicon: "img/favicon.ico",
 
-  // Set the production url of your site here
-  url: "https://kozz-bot.github.io",
-  // Set the /<baseUrl>/ pathname under which your site is served
-  // For GitHub pages deployment, it is often '/<projectName>/'
+  url: process.env.DOCUSAURUS_URL || "https://kozz-docs.vercel.app",
   baseUrl: "/kozz-docs/",
 
   onBrokenLinks: "throw",
